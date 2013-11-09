@@ -23,6 +23,7 @@ public class BlueToothView extends View{
 			 ((Activity)this.getContext()).startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
 		}
 		else{
+
 			MyBroadcastReceiver receiver = new MyBroadcastReceiver();
 			IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
 			this.getContext().registerReceiver(receiver, filter);
@@ -47,8 +48,9 @@ class MyBroadcastReceiver extends BroadcastReceiver{
 		
 		if (BluetoothDevice.ACTION_FOUND.equals(action)) {
 			BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-			
-			
+			System.out.println("Found device!");
+            System.out.println(device.getName() + "\n" + device.getAddress());
+
 		}
 		
 	}
