@@ -48,6 +48,7 @@ class MyBroadcastReceiver extends BroadcastReceiver{
 	public MyBroadcastReceiver () {
 		
 	}
+	
 	@Override
 	public void onReceive(Context context, Intent intent) {
 		String action = intent.getAction();
