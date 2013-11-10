@@ -1,6 +1,7 @@
 package com.example.bluetooth;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.UUID;
 
 import android.app.Activity;
@@ -25,7 +26,7 @@ public class BlueToothView extends View{
 	public static String NAME = "Bluetooth";
 	public static UUID MY_UUID;
 	private Activity activity;
-	private MyBroadcastReceiver receiver;
+	public MyBroadcastReceiver receiver;
 	private BluetoothServerSocket mmServerSocket;
 	
 	public BlueToothView(Context context) {
@@ -84,16 +85,14 @@ public class BlueToothView extends View{
 		@Override
 		public void onClick(DialogInterface dialog, int which) {
 			
+			System.out.println("HEREzwer");
 			thread.cancel();
-			System.out.println(receiver.myDevice);
 
 			ConnectThread conThread = new ConnectThread(receiver.myDevice);
 			conThread.start();
 		}
 		
 	}
-	
-	
 	
 	private class AcceptThread extends Thread {
     public AcceptThread() {
@@ -104,7 +103,7 @@ public class BlueToothView extends View{
             // MY_UUID is the app's UUID string, also used by the client code
             tmp = bluetooth.listenUsingRfcommWithServiceRecord(NAME, MY_UUID);
         } catch (IOException e) { }
-        mmServerSocket = tmp;
+        mmServerSocket = tmp;        
     }
  
     public void run() {
@@ -133,6 +132,21 @@ public class BlueToothView extends View{
  
     private void manageConnectedSocket(BluetoothSocket socket) {
     	System.out.println("SOCKEEKEEEEETTT!!!!");
+    	BTDataManager manager = new BTDataManager(socket);
+		byte[] buffer = new byte[1028];
+		int size = 1024;
+		byte[] arr = ByteBuffer.allocate(4).putInt(size).array();
+		buffer[0] = arr[0];
+		buffer[1] = arr[1];
+		buffer[2] = arr[2];
+		buffer[3] = arr[3];
+		
+		for(int i = 4; i < buffer.length; i++) {
+			byte num = (byte)(Math.random()*2);
+			buffer[i] = num;
+		}
+		manager.write(buffer);		
+    	
 	}
 
 	/** Will cancel the listening socket, and cause the thread to finish */
@@ -148,6 +162,8 @@ private class ConnectThread extends Thread {
     private final BluetoothDevice mmDevice;
  
     public ConnectThread(BluetoothDevice device) {
+    	System.out.println("asdfasdf");
+
         // Use a temporary object that is later assigned to mmSocket,
         // because mmSocket is final
         BluetoothSocket tmp = null;
@@ -157,11 +173,15 @@ private class ConnectThread extends Thread {
         try {
             // MY_UUID is the app's UUID string, also used by the server code
             tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
-        } catch (IOException e) { }
+        } catch (IOException e) {
+        	e.printStackTrace();
+        }
         mmSocket = tmp;
     }
  
     public void run() {
+    	System.out.println("asdf3");
+
         // Cancel discovery because it will slow down the connection
         bluetooth.cancelDiscovery();
  
@@ -173,7 +193,10 @@ private class ConnectThread extends Thread {
             // Unable to connect; close the socket and get out
             try {
                 mmSocket.close();
-            } catch (IOException closeException) { }
+            } catch (IOException e) { 
+            	e.printStackTrace();
+
+            }
             return;
         }
  
@@ -182,7 +205,21 @@ private class ConnectThread extends Thread {
     }
  
     private void manageConnectedSocket(BluetoothSocket mmSocket2) {
-		// TODO Auto-generated method stub
+    	System.out.println("asdf");
+    	BTDataManager manager = new BTDataManager(mmSocket2);
+    	Thread t = new Thread(manager);
+    	t.start();
+    	
+    	while(true) {
+    		Object obj = manager.getLatestData();
+    		if(obj != null) {
+    			byte [] data = (byte [])obj;
+    			for(int i = 0;i<data.length;i++){
+    				System.out.println("DATA!!!!!");
+    				System.out.println(data[i]);
+    			}
+    		}
+    	}
 		
 	}
 
@@ -192,6 +229,11 @@ private class ConnectThread extends Thread {
             mmSocket.close();
         } catch (IOException e) { }
     }
+}
+
+public void unregister() {
+	activity.unregisterReceiver(receiver);
+	
 }
 	
 	
@@ -212,7 +254,7 @@ class MyBroadcastReceiver extends BroadcastReceiver{
 
 		if (BluetoothDevice.ACTION_FOUND.equals(action)) {
 			BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-			if(device != null && device.getName().equals("SGH-T999V")){
+			if(device != null && (device.getName().equals("SGH-T999V") || device.getName().equals("Nexus 4") || device.getName().equals("Nexus S"))){
 				myDevice = device;
 				System.out.println("Found device!");
 	            System.out.println(device.getName() + "\n" + device.getAddress());

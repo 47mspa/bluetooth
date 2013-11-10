@@ -42,6 +42,10 @@ public class MainActivity extends Activity {
 		return true;
 	}
 	
+	public void onStop(){
+		super.onStop();
+		bView.unregister();
+	}
 	class ButtonListener implements OnClickListener {
 
 		@Override
