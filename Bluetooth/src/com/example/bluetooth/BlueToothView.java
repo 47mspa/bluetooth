@@ -1,5 +1,6 @@
 package com.example.bluetooth;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.UUID;
@@ -132,6 +133,8 @@ public class BlueToothView extends View{
  
     private void manageConnectedSocket(BluetoothSocket socket) {
     	System.out.println("SOCKEEKEEEEETTT!!!!");
+    	
+    	/*
     	BTDataManager manager = new BTDataManager(socket);
 		byte[] buffer = new byte[1028];
 		int size = 1024;
@@ -145,7 +148,21 @@ public class BlueToothView extends View{
 			byte num = (byte)(Math.random()*2);
 			buffer[i] = num;
 		}
-		manager.write(buffer);		
+
+    	manager.write(buffer);	
+    	*/
+    	BTDataManager manager = new BTDataManager(socket);
+    	File sFile = ((MainActivity)activity).getSelectedFile();
+    	try {
+			BTFile btFile = FileManager.readFile(sFile);
+			manager.write(btFile);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	
+    			
+			
     	
 	}
 
