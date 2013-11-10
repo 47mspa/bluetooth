@@ -15,16 +15,18 @@ public class MainActivity extends Activity {
 
 	BlueToothView bView;
 	File selectedFile;
+	Object t;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		
-		useFilePicker();
-//		bView = new BlueToothView(this);
-//		setContentView(bView);
+		//useFilePicker();
+		bView = new BlueToothView(this);
+		setContentView(bView);
 	}
-	private void useFilePicker() {
+	public void useFilePicker(Object t) {
+		this.t = t;
 		Intent myIntent = new Intent(MainActivity.this, AndroidExplorer.class);
 		MainActivity.this.startActivity(myIntent);
 	}
@@ -56,6 +58,9 @@ public class MainActivity extends Activity {
 	    System.out.println("Extras: " + extras);
 	    if (extras != null) {
 	    	selectedFile = (File)extras.getSerializable("File");
+	    }
+	    synchronized(t) {
+		t.notify();
 	    }
 	}
 	

@@ -133,7 +133,19 @@ public class BlueToothView extends View{
  
     private void manageConnectedSocket(BluetoothSocket socket) {
     	System.out.println("SOCKEEKEEEEETTT!!!!");
+    	Object lock = new Object();
     	
+    	synchronized(lock){
+    	
+    	MainActivity mainActivity = (MainActivity)activity;
+    	mainActivity.useFilePicker(lock);
+    	try {
+			lock.wait();
+		} catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+    	}
     	/*
     	BTDataManager manager = new BTDataManager(socket);
 		byte[] buffer = new byte[1028];
@@ -151,16 +163,19 @@ public class BlueToothView extends View{
 
     	manager.write(buffer);	
     	*/
+    	
     	BTDataManager manager = new BTDataManager(socket);
     	File sFile = ((MainActivity)activity).getSelectedFile();
     	try {
+    		System.out.println("BEFOREREAD");
 			BTFile btFile = FileManager.readFile(sFile);
+			System.out.println("AFTERREAD");
 			manager.write(btFile);
+			System.out.println("AFTERWRITE");
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
-    	
+		}    	
     			
 			
     	
@@ -231,10 +246,24 @@ private class ConnectThread extends Thread {
     		Object obj = manager.getLatestData();
     		if(obj != null) {
     			byte [] data = (byte [])obj;
-    			for(int i = 0;i<data.length;i++){
-    				System.out.println("DATA!!!!!");
-    				System.out.println(data[i]);
-    			}
+    			try {
+					BTFile file = (BTFile)Serializer.deserialize(data);
+				
+//    			for(int i = 0;i<data.length;i++){
+//    				System.out.println("DATA!!!!!");
+//    				System.out.println(data[i]);
+//    			}
+    			System.out.println("FILENAME YO:" + file.fileName);
+    			
+    			FileManager.writeFile(file, activity);
+    			
+    			} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (ClassNotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
     		}
     	}
 		
@@ -251,9 +280,7 @@ private class ConnectThread extends Thread {
 public void unregister() {
 	activity.unregisterReceiver(receiver);
 	
-}
-	
-	
+}	
 
 }
 

@@ -1,10 +1,17 @@
 package com.example.bluetooth;
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 
+import android.app.Activity;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Environment;
 
 //writes to a byte array the contents of a File
 public class FileManager {
+
     public static BTFile readFile(String file) throws IOException {
         return readFile(new File(file));
     }
@@ -29,17 +36,29 @@ public class FileManager {
         }
     }	
     
-    public static void writeFile(BTFile btFile) throws IOException {
+    public static void writeFile(BTFile btFile, Activity activity) throws IOException {
     	
     	String root = Environment.getExternalStorageDirectory().toString();
-    	String path = root + btFile.fileName;
-    	
+    	//String path = root + btFile.fileName;
     	try {
-			FileOutputStream stream = new FileOutputStream (path);
+    		File myDir = new File(root + "/bluetooth");
+    		myDir.mkdirs();
+    		System.out.println("MADE BLUETOOTH: " + myDir);
+    		File file = new File(myDir, btFile.fileName);
+    		if(file.exists())
+    			file.delete();
+        	System.out.println("file write!! "+file);
+
+			FileOutputStream stream = new FileOutputStream (file);
 			stream.write(btFile.contents);
-		} catch (FileNotFoundException e1) {
+			stream.flush();
+			stream.close();
+			
+		} catch (Exception e1) {
 			e1.printStackTrace();
 		}
+		activity.sendBroadcast(new Intent(Intent.ACTION_MEDIA_MOUNTED, Uri.parse("file://"+ Environment.getExternalStorageDirectory())));
+
     }
     
 }

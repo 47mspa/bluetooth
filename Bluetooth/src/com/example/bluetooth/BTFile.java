@@ -10,7 +10,7 @@ public class BTFile implements Serializable {
 	public byte[] contents;
 	
 	public BTFile (File file, byte[] data){
-		fileName = file.getAbsolutePath();
+		fileName = file.getName();
 		lastModified = new Timestamp(file.lastModified());
 		contents = data;
 	}
