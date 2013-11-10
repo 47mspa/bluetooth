@@ -3,8 +3,9 @@ package com.example.bluetooth;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
 import java.io.OutputStream;
+import java.io.StreamCorruptedException;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import android.bluetooth.BluetoothSocket;
@@ -16,7 +17,7 @@ public class BTDataManager implements Runnable {
 	private final BluetoothSocket m_socket; //The Bluetooth socket that is connected
 	private final InputStream m_instream; 
 	private final OutputStream m_outstream;
-	private final DataInputStream m_instreamReader;
+	private DataInputStream m_instreamReader;
 	
 	//private final ObjectInputStream m_objinstream; //send and recieve serialized objects instead of files 
 	//private final ObjectOutputStream m_objoutstream;
@@ -42,7 +43,10 @@ public class BTDataManager implements Runnable {
 		}
 
 		m_instream = tmpIn;
-		m_instreamReader = new DataInputStream(m_instream);
+
+			m_instreamReader = new DataInputStream(m_instream);
+		
+		
 		m_outstream = tmpOut;
 		//m_objinstream = tmpObjIn;
 		//m_objoutstream = tmpObjOut;

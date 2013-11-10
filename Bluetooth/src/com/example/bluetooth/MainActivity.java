@@ -1,21 +1,32 @@
 package com.example.bluetooth;
 
+import java.io.File;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.content.DialogInterface.OnClickListener;;
 
 public class MainActivity extends Activity {
 
 	BlueToothView bView;
+	File selectedFile;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		bView = new BlueToothView(this);
-		setContentView(bView);
+		
+		useFilePicker();
+//		bView = new BlueToothView(this);
+//		setContentView(bView);
+	}
+	private void useFilePicker() {
+		Intent myIntent = new Intent(MainActivity.this, AndroidExplorer.class);
+		MainActivity.this.startActivity(myIntent);
 	}
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		System.out.println(requestCode + " " + resultCode);
@@ -35,6 +46,22 @@ public class MainActivity extends Activity {
 		     }
 		  }
 		}//onActivityResult
+	
+	@Override
+	protected void onNewIntent(Intent intent) {
+	    super.onNewIntent(intent);
+	    Log.d("MyApp", "Bringing this Activity back!");
+
+	    Bundle extras = intent.getExtras();
+	    System.out.println("Extras: " + extras);
+	    if (extras != null) {
+	    	selectedFile = (File)extras.getSerializable("File");
+	    }
+	}
+	
+	public File getSelectedFile() {
+		return selectedFile;
+	}
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
@@ -44,7 +71,8 @@ public class MainActivity extends Activity {
 	
 	public void onStop(){
 		super.onStop();
-		bView.unregister();
+		if(bView != null)
+			bView.unregister();
 	}
 	class ButtonListener implements OnClickListener {
 
