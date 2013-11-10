@@ -2,11 +2,15 @@ package com.example.bluetooth;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.UUID;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
@@ -16,6 +20,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Handler;
+import android.os.Message;
 import android.view.View;
 
 public class BlueToothView extends View{
@@ -29,9 +35,22 @@ public class BlueToothView extends View{
 	private Activity activity;
 	public MyBroadcastReceiver receiver;
 	private BluetoothServerSocket mmServerSocket;
+	private AlertDialog connectDialog;
+	private ProgressDialog progress;
+	private AcceptThread acceptThread;
+	private Handler handler = new Handler() {
+          @Override
+              public void handleMessage(Message msg) {
+        	  System.out.println(msg);
+        	  if(progress != null)
+              progress.dismiss();
+
+          }
+      };
 	
 	public BlueToothView(Context context) {
 		super(context);
+
 		activity = (Activity)context;
 		String uuid ="566156c0-49a8-11e3-8f96-0800200c9a66";
 		MY_UUID = UUID.fromString(uuid);
@@ -55,21 +74,25 @@ public class BlueToothView extends View{
 		this.getContext().registerReceiver(receiver, filter);
 		bluetooth.startDiscovery();		
 		
-		setup();
+		acceptThread = new AcceptThread();
+		acceptThread.start();
+		
 	}
 	
 	private void setup() {
-		
-		AcceptThread acceptThread = new AcceptThread();
-		acceptThread.start();
-		
+	
+		progress = new ProgressDialog (activity);
+    	progress.setTitle("Sending");
+    	progress.setMessage("Sending file please wait...");
+    	progress.show();
+    	
 		 AlertDialog.Builder builder = new AlertDialog.Builder(activity);
     	 builder.setMessage("Press to Connect");
     	 builder.setTitle("Connect");
-    	 builder.setPositiveButton("OK", new ButtonListener(acceptThread));
+    	 builder.setPositiveButton("OK", new ButtonListener());
     	 builder.setNegativeButton("Cancel", null);
-    	 AlertDialog dialog = builder.create();
-    	 dialog.show();
+    	 connectDialog = builder.create();
+    	 connectDialog.show();
 	}
 	
 	public void requestBlueToothOn() {
@@ -79,15 +102,13 @@ public class BlueToothView extends View{
 	
 	private class ButtonListener implements DialogInterface.OnClickListener {
 
-		AcceptThread thread;
-		ButtonListener(AcceptThread thread) {
-			this.thread = thread;
+		ButtonListener() {
 		}
 		@Override
 		public void onClick(DialogInterface dialog, int which) {
 			
 			System.out.println("HEREzwer");
-			thread.cancel();
+			acceptThread.cancel();
 
 			ConnectThread conThread = new ConnectThread(receiver.myDevice);
 			conThread.start();
@@ -102,7 +123,7 @@ public class BlueToothView extends View{
         BluetoothServerSocket tmp = null;
         try {
             // MY_UUID is the app's UUID string, also used by the client code
-            tmp = bluetooth.listenUsingRfcommWithServiceRecord(NAME, MY_UUID);
+            tmp = bluetooth.listenUsingInsecureRfcommWithServiceRecord(NAME, MY_UUID);
         } catch (IOException e) { }
         mmServerSocket = tmp;        
     }
@@ -114,6 +135,7 @@ public class BlueToothView extends View{
             try {
                 socket = mmServerSocket.accept();
             } catch (IOException e) {
+            	e.printStackTrace();
                 break;
             }
             // If a connection was accepted
@@ -133,6 +155,9 @@ public class BlueToothView extends View{
  
     private void manageConnectedSocket(BluetoothSocket socket) {
     	System.out.println("SOCKEEKEEEEETTT!!!!");
+    	if(connectDialog != null)
+    	connectDialog.dismiss();
+    	
     	Object lock = new Object();
     	
     	synchronized(lock){
@@ -166,6 +191,7 @@ public class BlueToothView extends View{
     	
     	BTDataManager manager = new BTDataManager(socket);
     	File sFile = ((MainActivity)activity).getSelectedFile();
+    	
     	try {
     		System.out.println("BEFOREREAD");
 			BTFile btFile = FileManager.readFile(sFile);
@@ -175,9 +201,8 @@ public class BlueToothView extends View{
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}    	
-    			
-			
+		}
+    	handler.sendEmptyMessage(0);			
     	
 	}
 
@@ -190,7 +215,7 @@ public class BlueToothView extends View{
 }
 
 private class ConnectThread extends Thread {
-    private final BluetoothSocket mmSocket;
+    private BluetoothSocket mmSocket;
     private final BluetoothDevice mmDevice;
  
     public ConnectThread(BluetoothDevice device) {
@@ -204,7 +229,7 @@ private class ConnectThread extends Thread {
         // Get a BluetoothSocket to connect with the given BluetoothDevice
         try {
             // MY_UUID is the app's UUID string, also used by the server code
-            tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
+            tmp = device.createInsecureRfcommSocketToServiceRecord(MY_UUID);
         } catch (IOException e) {
         	e.printStackTrace();
         }
@@ -224,11 +249,44 @@ private class ConnectThread extends Thread {
         } catch (IOException connectException) {
             // Unable to connect; close the socket and get out
             try {
-                mmSocket.close();
+            	Class<?> clazz = mmSocket.getRemoteDevice().getClass();
+            	Class<?>[] paramTypes = new Class<?>[] {Integer.TYPE};
+
+            	Method m = clazz.getMethod("createRfcommSocket", paramTypes);
+            	Object[] params = new Object[] {Integer.valueOf(1)};
+
+            	BluetoothSocket fallbackSocket = (BluetoothSocket) m.invoke(mmSocket.getRemoteDevice(), params);
+            	fallbackSocket.connect();
+            	mmSocket = fallbackSocket;
+            	
             } catch (IOException e) { 
+            	try {
+					mmSocket.close();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
             	e.printStackTrace();
 
-            }
+            } catch (NoSuchMethodException e) {
+				// TODO Auto-generated catch block
+            	try {
+					mmSocket.close();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				e.printStackTrace();
+			} catch (IllegalArgumentException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InvocationTargetException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
             return;
         }
  
@@ -256,7 +314,8 @@ private class ConnectThread extends Thread {
     			System.out.println("FILENAME YO:" + file.fileName);
     			
     			FileManager.writeFile(file, activity);
-    			
+    	    	handler.sendEmptyMessage(0);			
+
     			} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -280,6 +339,11 @@ private class ConnectThread extends Thread {
 public void unregister() {
 	activity.unregisterReceiver(receiver);
 	
+}
+
+public void deviceSelected(String item) {
+	receiver.myDevice = receiver.map.get(item);
+	setup();
 }	
 
 }
@@ -287,9 +351,12 @@ public void unregister() {
 class MyBroadcastReceiver extends BroadcastReceiver{
 	
 	public BluetoothDevice myDevice;
+	public HashMap<String, BluetoothDevice> map;
+	public ArrayList<String> devices;
 	
 	public MyBroadcastReceiver () {
-
+		map = new HashMap<String, BluetoothDevice> ();
+		devices = new ArrayList<String>();
 	}
 	
 	@Override
@@ -298,8 +365,9 @@ class MyBroadcastReceiver extends BroadcastReceiver{
 
 		if (BluetoothDevice.ACTION_FOUND.equals(action)) {
 			BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-			if(device != null && (device.getName().equals("SGH-T999V") || device.getName().equals("Nexus 4") || device.getName().equals("Nexus S"))){
-				myDevice = device;
+			if(device != null){
+				devices.add(device.getName());
+				map.put(device.getName(), device);
 				System.out.println("Found device!");
 	            System.out.println(device.getName() + "\n" + device.getAddress());
 			}

@@ -1,15 +1,23 @@
 package com.example.bluetooth;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
-import android.content.DialogInterface.OnClickListener;;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 
 public class MainActivity extends Activity {
 
@@ -23,7 +31,7 @@ public class MainActivity extends Activity {
 		
 		//useFilePicker();
 		bView = new BlueToothView(this);
-		setContentView(bView);
+		setContentView(R.layout.view);//setContentView(bView);
 	}
 	public void useFilePicker(Object t) {
 		this.t = t;
@@ -59,9 +67,36 @@ public class MainActivity extends Activity {
 	    if (extras != null) {
 	    	selectedFile = (File)extras.getSerializable("File");
 	    }
+	    if(t != null) {
 	    synchronized(t) {
 		t.notify();
 	    }
+	    }
+	}
+	
+	public void doneSearching (View v) {
+		//bView.bluetooth.cancelDiscovery();
+		v.setEnabled(false);
+	    final ListView listview = (ListView) findViewById(R.id.listView1);
+	    final ArrayList<String> list = bView.receiver.devices;
+	    
+	    final StableArrayAdapter adapter = new StableArrayAdapter(this,
+	            android.R.layout.simple_list_item_1, list);
+	        listview.setAdapter(adapter);
+
+	        listview.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+
+	          @Override
+	          public void onItemClick(AdapterView<?> parent, final View view,
+	              int position, long id) {
+	            final String item = bView.receiver.devices.get(position);//(String) parent.getItemAtPosition(position);
+	        
+             	bView.deviceSelected(item);
+	            adapter.notifyDataSetChanged();
+	            view.setAlpha(1);
+	          }
+
+	        });
 	}
 	
 	public File getSelectedFile() {
@@ -88,7 +123,33 @@ public class MainActivity extends Activity {
 		}
 		
 	}
+	
+	 private class StableArrayAdapter extends ArrayAdapter<String> {
 
+		    HashMap<String, Integer> mIdMap = new HashMap<String, Integer>();
+
+		    public StableArrayAdapter(Context context, int textViewResourceId,List<String> objects) {
+		      super(context, textViewResourceId, objects);
+		      for (int i = 0; i < objects.size(); ++i) {
+		        mIdMap.put(objects.get(i), i);
+		      }
+		    }
+
+		    @Override
+		    public long getItemId(int position) {
+		      String item = getItem(position);
+		      return mIdMap.get(item);
+		    }
+
+		    @Override
+		    public boolean hasStableIds() {
+		      return true;
+		    }
+
+		  }
+	
 }
+
+
 
 

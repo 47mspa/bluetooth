@@ -69,7 +69,7 @@ public class BTDataManager implements Runnable {
 //			// TODO Auto-generated catch block
 //			e1.printStackTrace();
 //		}
-
+		
 		while (true) { 
 			
 			try {
@@ -108,7 +108,7 @@ public class BTDataManager implements Runnable {
 		}
 
 	}
-
+		
 	/**
 	 * Retrieve the object data read in from the bluetooth socket from the queue
 	 * @author Max 
